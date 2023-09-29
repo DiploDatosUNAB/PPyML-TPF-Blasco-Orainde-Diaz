@@ -1,0 +1,457 @@
+---
+title: "PP_y_ML"
+output: html_document
+date: "2023-09-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### UNaB
+
+# Trabajo Práctico Integrador
+Materia "Políticas Públicas y Machine Learning"
+Diplomatura en Análisis de Datos para el Desarrollo de Políticas Públicas
+Universidad Nacional Guillermo Brown
+
+Docente:
+Marianela Sarabia
+
+Integrantes:
+Alejandro Blasco
+Diego Orainde
+Alfredo Rafael Díaz
+
+## Documentación
+Fuente: Datos correspondientes a los trabajadores formales del AMBA registrados en el Sistema Integrado Previsional Argentino (SIPA), incluyendo desagregación geográfica a nivel de radio censal y sector de actividad a dos dígitos y a nivel de letra (CLAE) https://datos.gob.ar/dataset/produccion-distribucion-empleo-formal-amba
+Repositorio GIT: https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz
+Texto TPI: https://docs.google.com/document/d/1VHzNVM_oqZWIXRu-P9h2l299MbaJmtyF-FMtq6djJIM/edit
+Versión .rmd:
+
+## Análisis Exploratorio de Datos
+
+### 0.Acciones Preliminares
+```{r}
+# NOTA: Es posible conectar a un entorno T4 GPU para aprovechar la capacidad de procesamiento para ML
+# https://serverguy.com/comparison/cpu-vs-gpu-vs-tpu/
+# https://saturncloud.io/blog/how-to-activate-gpu-computing-in-google-colab/```
+```
+
+```{r}
+# Clonación de datos del repositorio Git
+system("git clone --single-branch --branch datos https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz.git data")
+```
+
+```{r}
+# Agregado del archivo Empleo-AMBA.csv  a la notebook, que por tamaño no puede ser alojado en github
+library(googledrive)
+# URL del archivo compartido en Google Drive
+drive_url <- "https://drive.google.com/file/d/1oIgB5CCFFGFjF0PaP1GykQyw0Dfyrd-Y/view?usp=sharing"
+drive_id <- sub(".*/d/([^/]+)/.*", "\\1", drive_url)
+drive_path <- sprintf("https://drive.google.com/uc?export=download&id=%s", drive_id)
+temporal <- tempfile(fileext = ".csv")
+download.file(drive_path, temporal, mode = "wb")
+file.rename(temporal, "/content/data/Empleo-AMBA.csv")
+```
+
+```{r}
+# instalación de librerías (DEMORA 11 MINUTOS)
+# https://stackoverflow.com/questions/66869137/installing-r-packages-in-colab
+instalar <- function(libreria) {
+  if (!requireNamespace(libreria, quietly = TRUE)) {
+    install.packages(libreria)
+  }
+}
+
+# paquetes <- list()
+# # Agrega paquetes uno por uno
+# paquetes <- c(paquetes, "sf")
+# # paquetes <- c(paquetes, "gt")
+# # paquetes <- c(paquetes, "psych")
+# paquetes <- c(paquetes, "skimr")
+# paquetes <- c(paquetes, "caret")
+
+# for (paquete in paquetes) {
+#   instalar(paquete)
+# }
+```
+
+```{r}
+# demora 7 minutos
+instalar("sf")
+```
+
+```{r}
+# demora 46 segundos
+instalar("gt")
+```
+
+```{r}
+# demora 28 segundos
+instalar("psych")
+```
+
+
+```{r remedy001}
+# demora demora 3 segundos
+instalar("skimr")
+```
+
+```{r remedy002}
+# demora
+instalar("caret")
+```
+
+```{r remedy003}
+
+# carga de librerías a utilizar
+library(sf)       # datos geoespaciales
+library(lattice)  # graficación estadistica
+library(ggplot2)  # graficación
+library(readr)    # lectura de datos
+library(cluster)  # clustering
+library(dplyr)    # manipulación de df
+library(skimr)    # estadísticas
+library(stats)    # estadísticas
+library(gt)       # tablas
+library(psych)    # estadísticas
+library(caret)    # entrenamiento
+
+```
+
+## 1.Listado de Tablas
+
+### 1.1.Radios Censales
+
+
+
+```{r remedy004}
+# lectura de los polígonos de radios censales
+radios_censales <- st_read("/content/data/Shapes/Shape AMBA.shp")
+
+head(radios_censales)
+```
+
+```{r remedy005}
+# graficación de radios censales
+ggplot() +
+  geom_sf(data = radios_censales) +
+  labs(title = "Radios Censales en Área Metropolitana de Buenos Aires")
+```
+
+### 1.2.Empleo AMBA
+
+```{r remedy006}
+# Empleo AMBA
+df <- read.csv("/content/data/Empleo-AMBA.csv", sep = ",", encoding = "UTF-8")
+head(df, 5)
+```
+
+```{r remedy007}
+# dimensiones
+cat("El DataFrame tiene", dim(df)[1], "observaciones y", dim(df)[2], "variables.")
+```
+
+```{r remedy008}
+# diccionario de datos
+descripciones <- c(
+  "Identificador del radio censal",
+  "Indicador de provincia",
+  "Indicador de departamento",
+  "Indicador de CLAE a dos dígitos de desagregación",
+  "Indicador de CLAE a nivel de letra",
+  "Cantidad de trabajadores en el radio censal para la desagregación de dos dígitos",
+  "Cantidad de trabajadores hombres en el radio censal para la desagregación de dos dígitos",
+  "Cantidad de trabajadoras mujeres en el radio censal para la desagregación de dos dígitos",
+  "Salario medio de los trabajadores del radio censal para cada nivel de desagregación de actividad",
+  "Salario medio de los trabajadores hombres del radio censal para cada nivel de desagregación de actividad",
+  "Salario medio de los trabajadoras mujeres del radio censal para cada nivel de desagregación de actividad",
+  "Salario mediano de los trabajadores del radio censal para cada nivel de desagregación de actividad",
+  "Salario mediano de los trabajadores hombres del radio censal para cada nivel de desagregación de actividad",
+  "Salario mediano de los trabajadoras mujeres del radio censal para cada nivel de desagregación de actividad",
+  "Cantidad de personas que habitan en el radio censal según Censo 2010 (INDEC)",
+  "Cantidad de viviendas en el radio censal según Censo 2010 (INDEC)"
+)
+
+diccionario <- data.frame(
+  Clase = sapply(df, class),
+  Descripción = descripciones
+)
+
+diccionario <- tibble::rownames_to_column(diccionario, "Variable")
+
+diccionario
+```
+
+```{r remedy009}
+# Empleo AMBA a letra
+df_a_letra <- read.csv("/content/data/Empleo-AMBA-a-letra.csv", sep = ",", encoding = "UTF-8")
+empleo_tipo <- df_a_letra
+head(df_a_letra, 5)
+```
+
+```{r remedy010}
+# dimensiones
+cat("El DataFrame tiene", dim(df_a_letra)[1], "observaciones y", dim(df_a_letra)[2], "variables.")
+```
+
+```{r remedy011}
+# lista de variables
+print(attr(df_a_letra, "names"))
+```
+
+```{r remedy012}
+# Empleo AMBA sin desagregar
+df_sin_desagregar <- read.csv("/content/data/Empleo-AMBA-sin-desagregar.csv", sep = ",", encoding = "UTF-8")
+empleo <- df_sin_desagregar
+head(df_sin_desagregar, 5)
+```
+
+```{r remedy013}
+# dimensiones
+cat("El DataFrame tiene", dim(df_sin_desagregar)[1], "observaciones y", dim(df_sin_desagregar)[2], "variables.")
+```
+
+```{r remedy014}
+# lista de variables
+print(attr(df_sin_desagregar, "names"))
+```
+
+### 1.3.Tablas Auxiliares
+
+```{r remedy015}
+actividades <- read.csv("/content/data/actividades.csv", sep = ",", encoding = "UTF-8")
+head(actividades, 5)
+```
+
+```{r remedy016}
+cat("El DataFrame tiene", dim(actividades)[1], "observaciones y", dim(actividades)[2], "variables.")
+```
+
+```{r remedy017}
+# Listado de actividades
+print(unique(actividades$clae2_desc))
+```
+
+```{r remedy018}
+# Listado de actividades
+print(unique(actividades$letra_desc))
+```
+
+```{r remedy019}
+# Cargar las librerías necesarias
+install.packages("gt")
+library(tidyverse)
+library(gt)
+
+# Agrupar las subactividades por actividad
+actividad_clae <- actividades %>%
+  group_by(letra_desc) %>%
+  summarize(CLAE = paste(clae2_desc, collapse = ", "))
+
+# Crear una tabla gt
+tabla_gt <- actividad_clae %>%
+  gt()
+
+# Mostrar la tabla en la notebook de Colab
+tabla_gt
+```
+
+```{r remedy020}
+jurisdicciones <- read.csv("/content/data/jurisdicciones.csv", sep = ",", encoding = "UTF-8")
+head(jurisdicciones, 5)
+```
+
+```{r remedy021}
+cat("El DataFrame tiene", dim(jurisdicciones)[1], "observaciones y", dim(jurisdicciones)[2], "variables.")
+```
+
+```{r}
+# Listado de departamentos
+print(unique(jurisdicciones$departamento))
+```
+
+
+## Descripción
+
+```{r}
+hist(empleo$Remuneracion_media_Hombres, breaks = 1000,
+     col='blue',
+     main='histograma salario_medio',
+     xlab='salario',
+     ylab='Frequency')
+```
+
+```{r}
+summary(empleo)
+```
+
+
+```{r remedy022}
+summary(empleo_tipo)
+```
+
+```{r remedy023}
+empleo_means <- aggregate(empleo_tipo$Remuneracion_media,
+                        list(empleo_tipo$letra),
+                        mean)
+empleo_means
+```
+
+```{r remedy024}
+filtrado <- empleo_tipo|>
+  filter(Remuneracion_media_Hombres < 3000000, Remuneracion_media_Mujeres < 2000000)
+
+ggplot(filtrado, aes(Remuneracion_media_Hombres,
+                        Remuneracion_media_Mujeres)
+       ) + geom_point(aes(col=letra), size=3)
+```
+
+
+```{r remedy025}
+filtrado2 <- empleo_tipo|>
+  filter(Remuneracion_media_Hombres < 500000, Remuneracion_media_Mujeres < 500000)
+
+ggplot(filtrado2, aes(Remuneracion_media_Hombres,
+                        Remuneracion_media_Mujeres)
+       ) + geom_point(aes(col=letra), size=3)
+```
+
+```{r remedy026}
+#boxplots comparados
+boxplot(filtrado2$Remuneracion_media_Mujeres ~ filtrado2$letra,
+        col = 1:3)
+points(x = 1:nrow(empleo_means),
+       y = empleo_means$x,
+       pch = 16,
+       col = "white")
+text(x = 1:nrow(empleo_means),
+     y = empleo_means$x + 1.2,
+     labels = round(empleo_means$x, 2),
+     col = "white")
+```
+
+```{r remedy027}
+plot(empleo_tipo$Remuneracion_media_Hombres, empleo_tipo$Remuneracion_media_Mujeres,
+     col='steelblue',
+     main='Scatterplot',
+     xlab='Media hombres',
+     ylab='Media mujeres',
+     pch=19)
+```
+
+```{r remedy028}
+empleo_tipo2 <- na.omit(filtrado)
+```
+
+```{r remedy029}
+empleoCluster2 <- kmeans(filtrado[,9:10], center=2, iter.max=10, nstart=20)
+empleoCluster2
+```
+
+```{r remedy030}
+empleoCluster3 <- kmeans(filtrado[,9:10], center=3, iter.max=10, nstart=20)
+empleoCluster3
+```
+
+```{r remedy031}
+empleoCluster15 <- kmeans(filtrado[,9:10], center=15, iter.max=10, nstart=20)
+empleoCluster15
+```
+
+```{r remedy032}
+table(empleoCluster15$cluster, filtrado$letra)
+clusplot(filtrado, empleoCluster15$cluster, color=T, shade=T, labels=0, lines=0)
+```
+
+```{r remedy033}
+# INTERRUPCIÓN. ELIMINAR O COMENTAR SEGÚN SEA NECESARIO
+stop("Detención manual del código")
+```
+
+```{r remedy034}
+# Para abordar estos warnings, podrías considerar ajustar el número de centroides
+# que estás probando (center) o modificar otros parámetros del algoritmo k-means,
+# como nstart, que controla el número de inicializaciones aleatorias que se ejecutan
+# para encontrar el mejor resultado. También podrías evaluar la estructura de tus
+# datos para determinar si el número de centroides elegido tiene sentido desde
+# un punto de vista de negocio o análisis de datos.
+
+tot.withinss <- vector(mode="character", length=10)
+for (i in 1:15){
+  empleoCluster <- kmeans(filtrado[,9:10], center=i, nstart=20)
+  tot.withinss[i] <- empleoCluster$tot.withinss
+}
+```
+
+```{r remedy035}
+plot(1:15, tot.withinss, type="b", pch=19)
+```
+
+```{r remedy036}
+xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres,
+       data = filtrado,
+       type = c("p", "g", "smooth"),
+       xlab = "Remuneracion_media_Hombres",
+       ylab = "Remuneracion_media_Mujeres)")
+```
+
+```{r remedy037}
+xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres | letra,
+       group = letra,
+       data = filtrado,
+       auto.key = TRUE,
+       type = c("p", "smooth"),
+       scales= "free")
+```
+
+```{r remedy038}
+set.seed(001)
+intrain <- createDataPartition(y = filtrado$letra,
+                               p= 0.7, list = FALSE)
+```
+
+```{r remedy039}
+training <- filtrado[intrain,] # nuevo dataset
+testing <- filtrado[-intrain,] # nuevo dataset
+dim(training)
+dim(testing)
+```
+
+```{r remedy040}
+skimmed <- skim(training)
+# skimmed[, c(1:15)]
+summary(skimmed)[1:15]
+```
+
+```{r remedy041}
+x = training[, 9:10]
+y = training$letra
+x_test = testing[9:10]
+y_test = testing$letra
+```
+
+```{r remedy042}
+trctrl1 <- trainControl(method =
+                          "LOOCV", number = 10)
+```
+
+```{r remedy043}
+trctrl2 <- trainControl(method =
+                          "repeatedcv", number = 10, repeats = 3)
+```
+
+```{r remedy044}
+# Acá muere x RAM
+# knn_fit1 <- train(letra ~., data = training, method = "knn",
+#                   trControl =trctrl1,
+#                   tuneLength = 10)
+```
+
+```{r remedy045}
+# knn_fit2 <- train(letra ~., data = training, method = "knn",
+#                   trControl =trctrl2,
+#                   preProcess = c("center", "scale"),
+#                   tuneLength = 10)
+```
