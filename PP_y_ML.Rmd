@@ -82,7 +82,7 @@ COLAB <- FALSE
 # Habilitar Análisis Geoespacial (sf)
 SIG <- TRUE
 # Habilitar Clasificación y Regresión (caret)
-ML <- FALSE
+ML <- TRUE
 if (COLAB) {
   PATH <- "/content/data/"
 } else {
@@ -642,6 +642,8 @@ Para la descripción y análisis se generaron alias de las tablas principales:
 *   Empleo AMBA sin desagregar --> `df_sin_desagregar` --> `empleo`
 *   Empleo AMBA x departamento --> `df_x_departamento`
 *   Empleo AMBA sin desagregar x departamento --> `df_sin_des_x_dep`
+*   Shape AMBA.shp --> `radios_censales`
+*   Departamentos --> `departamentos`
 
 
 ```{r bloque060}
