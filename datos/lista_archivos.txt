@@ -1,0 +1,10 @@
+actividades.csv
+Empleo-AMBA-a-letra.csv
+Empleo-AMBA-sin-desagregar.csv
+Empleo-AMBA.csv
+jurisdicciones.csv
+lista_archivos.txt
+Shape AMBA.dbf
+Shape AMBA.prj
+Shape AMBA.shp
+Shape AMBA.shx

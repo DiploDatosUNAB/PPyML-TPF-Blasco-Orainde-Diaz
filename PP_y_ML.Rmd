@@ -1,159 +1,214 @@
 ---
-title: "PP_y_ML"
-output: html_document
-date: "2023-09-28"
+title: "PP & ML"
+author: "Orainde-Blasco-Diaz"
+date: "2023-09-16"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+      number_sections: true
+    code_folding: hide
+    ## includes:
+    ##   before_body: before_body.html
 ---
+<head>
+  <link href="https://fonts.googleapis.com/css?family=Libre+Franklin:400,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Google+Font+Name&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet"> 
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet" >
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Helvetica+Neue:400,700&display=swap" rel="stylesheet">
+</head>
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: #016763;
+body {
+  font-family: 'Libre Franklin', system-ui, 'Segoe UI', Roboto, Helvetica, 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'Source Sans Pro', 'Lato', 'Helvetica Neue', sans-serif;
+}
+</style>
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### UNaB
-
-# Trabajo Práctico Integrador
-Materia "Políticas Públicas y Machine Learning"
-Diplomatura en Análisis de Datos para el Desarrollo de Políticas Públicas
+***UNaB***
+#***Trabajo Práctico Integrador***
+Materia **"Políticas Públicas y Machine Learning"**\
+*Diplomatura en Análisis de Datos para el Desarrollo de Políticas Públicas*\
 Universidad Nacional Guillermo Brown
 
-Docente:
+***Docente:***\
 Marianela Sarabia
 
-Integrantes:
-Alejandro Blasco
-Diego Orainde
+***Integrantes:***\
+Alejandro Blasco\
+Diego Orainde\
 Alfredo Rafael Díaz
 
-## Documentación
-Fuente: Datos correspondientes a los trabajadores formales del AMBA registrados en el Sistema Integrado Previsional Argentino (SIPA), incluyendo desagregación geográfica a nivel de radio censal y sector de actividad a dos dígitos y a nivel de letra (CLAE) https://datos.gob.ar/dataset/produccion-distribucion-empleo-formal-amba
-Repositorio GIT: https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz
-Texto TPI: https://docs.google.com/document/d/1VHzNVM_oqZWIXRu-P9h2l299MbaJmtyF-FMtq6djJIM/edit
-Versión .rmd:
+# Documentación
 
-## Análisis Exploratorio de Datos
+*   Fuente: Datos correspondientes a los trabajadores formales del AMBA registrados en el Sistema Integrado Previsional Argentino (SIPA), incluyendo desagregación geográfica a nivel de radio censal y sector de actividad a dos dígitos y a nivel de letra (CLAE) https://datos.gob.ar/dataset/produccion-distribucion-empleo-formal-amba
+*   Repositorio GIT: https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz
+*   Texto TPI: https://docs.google.com/document/d/1VHzNVM_oqZWIXRu-P9h2l299MbaJmtyF-FMtq6djJIM/edit
+*   Versión .rmd:
 
-### 0.Acciones Preliminares
-```{r}
-# NOTA: Es posible conectar a un entorno T4 GPU para aprovechar la capacidad de procesamiento para ML
+# Análisis Exploratorio de Datos
+
+## 0.Acciones Preliminares
+
+```{r bloque001}
+# NOTA: Es posible conectar a un entorno T4 GPU y aprovechar la capacidad de procesamiento para ML
 # https://serverguy.com/comparison/cpu-vs-gpu-vs-tpu/
-# https://saturncloud.io/blog/how-to-activate-gpu-computing-in-google-colab/```
+# https://saturncloud.io/blog/how-to-activate-gpu-computing-in-google-colab/
+# https://bookdown.org/yshang/book/
+# https://stackoverflow.com/questions/54595285/how-to-use-r-with-google-colaboratory
+# https://colab.research.google.com/github/IRkernel/IRkernel/blob/master/example-notebooks/Display.ipynb
 ```
 
-```{r}
+```{r bloque002}
+# PARÁMETROS
+
+# Operar en Colab
+COLAB <- FALSE
+# Habilitar Análisis Geoespacial (sf)
+SIG <- TRUE
+# Habilitar Clasificación y Regresión (caret)
+ML <- FALSE
+if (COLAB) {
+  PATH <- "/content/data/"
+} else {
+  PATH <- "datos/"
+}
+
+actividades_csv <- "actividades.csv"
+df_a_letra_csv <- "Empleo-AMBA-a-letra.csv"
+df_sin_desagregar_csv <- "Empleo-AMBA-sin-desagregar.csv"
+df_csv <- "Empleo-AMBA.csv"
+jurisdicciones_csv <- "jurisdicciones.csv"
+shapes_shp <- "Shape AMBA.shp"
+```
+
+```{r bloque003}
 # Clonación de datos del repositorio Git
-system("git clone --single-branch --branch datos https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz.git data")
+if (COLAB) {
+  system("git clone --single-branch --branch datos https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz.git data")
+}
 ```
 
-```{r}
-# Agregado del archivo Empleo-AMBA.csv  a la notebook, que por tamaño no puede ser alojado en github
-library(googledrive)
-# URL del archivo compartido en Google Drive
-drive_url <- "https://drive.google.com/file/d/1oIgB5CCFFGFjF0PaP1GykQyw0Dfyrd-Y/view?usp=sharing"
-drive_id <- sub(".*/d/([^/]+)/.*", "\\1", drive_url)
-drive_path <- sprintf("https://drive.google.com/uc?export=download&id=%s", drive_id)
-temporal <- tempfile(fileext = ".csv")
-download.file(drive_path, temporal, mode = "wb")
-file.rename(temporal, "/content/data/Empleo-AMBA.csv")
+```{r bloque004}
+if (COLAB) {
+  # Agregado del archivo Empleo-AMBA.csv  a la notebook, que por tamaño no puede ser alojado en github
+  library(googledrive)
+  # URL del archivo compartido en Google Drive
+  drive_url <- "https://drive.google.com/file/d/1oIgB5CCFFGFjF0PaP1GykQyw0Dfyrd-Y/view?usp=sharing"
+  drive_id <- sub(".*/d/([^/]+)/.*", "\\1", drive_url)
+  drive_path <- sprintf("https://drive.google.com/uc?export=download&id=%s", drive_id)
+  download.file(drive_path, "/content/data/Empleo-AMBA.csv", mode = "wb")
+}
 ```
 
-```{r}
-# instalación de librerías (DEMORA 11 MINUTOS)
+```{r bloque005}
+# instalación condicional de librerías (solo instala si faltan)
 # https://stackoverflow.com/questions/66869137/installing-r-packages-in-colab
+# https://stackoverflow.com/questions/63594521/install-a-r-package-permanently-in-google-colab
 instalar <- function(libreria) {
   if (!requireNamespace(libreria, quietly = TRUE)) {
     install.packages(libreria)
   }
 }
 
-# paquetes <- list()
-# # Agrega paquetes uno por uno
-# paquetes <- c(paquetes, "sf")
-# # paquetes <- c(paquetes, "gt")
-# # paquetes <- c(paquetes, "psych")
-# paquetes <- c(paquetes, "skimr")
-# paquetes <- c(paquetes, "caret")
-
+# paquetes <- c("sf","gt","psych","skimr","caret")
 # for (paquete in paquetes) {
 #   instalar(paquete)
 # }
 ```
 
-```{r}
-# demora 7 minutos
-instalar("sf")
+```{r bloque006}
+# demora 5-10 segundos
+instalar("kableExtra")
 ```
 
-```{r}
-# demora 46 segundos
-instalar("gt")
-```
-
-```{r}
-# demora 28 segundos
+```{r bloque007}
+# demora 30-45 segundos
 instalar("psych")
 ```
 
-
-```{r remedy001}
-# demora demora 3 segundos
+```{r bloque008}
+# demora demora 3-8 segundos
 instalar("skimr")
 ```
 
-```{r remedy002}
-# demora
-instalar("caret")
+```{r bloque009}
+# demora 5-7 minutos
+if (ML) {
+  instalar("caret")
+}
 ```
 
-```{r remedy003}
+```{r bloque010}
+# demora 7-12 minutos
+if (SIG) {
+  instalar("sf")
+}
+```
 
+```{r bloque011}
+# carga condicional de librerías (solo carga si están instaladas)
+cargar <- function(libreria) {
+  if (requireNamespace(libreria, quietly = TRUE)) {
+    library(libreria, character.only = TRUE)
+  }
+}
+```
+
+```{r bloque012}
 # carga de librerías a utilizar
-library(sf)       # datos geoespaciales
-library(lattice)  # graficación estadistica
-library(ggplot2)  # graficación
-library(readr)    # lectura de datos
-library(cluster)  # clustering
-library(dplyr)    # manipulación de df
-library(skimr)    # estadísticas
-library(stats)    # estadísticas
-library(gt)       # tablas
-library(psych)    # estadísticas
-library(caret)    # entrenamiento
-
+library(lattice)    # graficación estadistica
+library(ggplot2)    # graficación
+library(readr)      # lectura de datos
+library(cluster)    # clustering
+library(dplyr)      # manipulación de df
+library(skimr)      # estadísticas
+library(stats)      # estadísticas
+library(kableExtra) # tablas
+library(psych)      # estadísticas
+# library(IRdisplay)  # display de notebook
+library(stringr)    # cadenas de caracteres
+cargar("gt")        # tablas
+cargar("caret")     # entrenamiento
+cargar("sf")        # datos geoespaciales
 ```
 
 ## 1.Listado de Tablas
 
-### 1.1.Radios Censales
+### 1.1.Empleo AMBA
 
+#### 1.1.1.Tabla principal
 
-
-```{r remedy004}
-# lectura de los polígonos de radios censales
-radios_censales <- st_read("/content/data/Shapes/Shape AMBA.shp")
-
-head(radios_censales)
-```
-
-```{r remedy005}
-# graficación de radios censales
-ggplot() +
-  geom_sf(data = radios_censales) +
-  labs(title = "Radios Censales en Área Metropolitana de Buenos Aires")
-```
-
-### 1.2.Empleo AMBA
-
-```{r remedy006}
+```{r bloque013}
 # Empleo AMBA
-df <- read.csv("/content/data/Empleo-AMBA.csv", sep = ",", encoding = "UTF-8")
+
+df <- read.csv(paste0(PATH, df_csv), sep = ",", encoding = "UTF-8")
 head(df, 5)
 ```
 
-```{r remedy007}
+```{r bloque014}
 # dimensiones
 cat("El DataFrame tiene", dim(df)[1], "observaciones y", dim(df)[2], "variables.")
 ```
 
-```{r remedy008}
+#### Diccionario de datos
+
+```{r bloque015}
 # diccionario de datos
 descripciones <- c(
   "Identificador del radio censal",
@@ -184,98 +239,440 @@ diccionario <- tibble::rownames_to_column(diccionario, "Variable")
 diccionario
 ```
 
-```{r remedy009}
+#### 1.1.2. Reducción a letra
+
+```{r bloque016}
 # Empleo AMBA a letra
-df_a_letra <- read.csv("/content/data/Empleo-AMBA-a-letra.csv", sep = ",", encoding = "UTF-8")
+df_a_letra <- read.csv(paste0(PATH, df_a_letra_csv), sep = ",", encoding = "UTF-8")
 empleo_tipo <- df_a_letra
 head(df_a_letra, 5)
 ```
 
-```{r remedy010}
+```{r bloque017}
 # dimensiones
 cat("El DataFrame tiene", dim(df_a_letra)[1], "observaciones y", dim(df_a_letra)[2], "variables.")
 ```
 
-```{r remedy011}
+```{r bloque018}
 # lista de variables
 print(attr(df_a_letra, "names"))
 ```
 
-```{r remedy012}
+Esta tabla posee la misma información que la principal, pero los datos de distintos CLAE dentro de una categoría de actividad fueron unificados.
+
+#### 1.1.3 Sin Desagregar
+
+```{r bloque019}
 # Empleo AMBA sin desagregar
-df_sin_desagregar <- read.csv("/content/data/Empleo-AMBA-sin-desagregar.csv", sep = ",", encoding = "UTF-8")
+df_sin_desagregar <- read.csv(paste0(PATH, df_sin_desagregar_csv), sep = ",", encoding = "UTF-8")
 empleo <- df_sin_desagregar
 head(df_sin_desagregar, 5)
 ```
 
-```{r remedy013}
+```{r bloque020}
 # dimensiones
 cat("El DataFrame tiene", dim(df_sin_desagregar)[1], "observaciones y", dim(df_sin_desagregar)[2], "variables.")
 ```
 
-```{r remedy014}
+```{r bloque021}
 # lista de variables
 print(attr(df_sin_desagregar, "names"))
 ```
 
-### 1.3.Tablas Auxiliares
+Esta tabla posee la misma información que la principal, pero sin desagregar por nomenclador de actividades.
 
-```{r remedy015}
-actividades <- read.csv("/content/data/actividades.csv", sep = ",", encoding = "UTF-8")
+### 1.2.Tablas Auxiliares
+
+#### Actividades
+
+```{r bloque022}
+actividades <- read.csv(paste0(PATH, actividades_csv), sep = ",", encoding = "UTF-8")
 head(actividades, 5)
 ```
-
-```{r remedy016}
+ 
+```{r}
 cat("El DataFrame tiene", dim(actividades)[1], "observaciones y", dim(actividades)[2], "variables.")
 ```
 
-```{r remedy017}
-# Listado de actividades
-print(unique(actividades$clae2_desc))
-```
-
-```{r remedy018}
+```{r bloque023}
 # Listado de actividades
 print(unique(actividades$letra_desc))
 ```
 
-```{r remedy019}
-# Cargar las librerías necesarias
-install.packages("gt")
-library(tidyverse)
-library(gt)
+```{r bloque024}
+# Cuadro de actividades x letra y clae
+actividad_clae <- actividades |>
+  group_by(letra_desc) |>
+  summarize(CLAE = paste(clae2_desc, collapse = " - "))
+  
+actividad_clae |>
+  gt() |> 
+  tab_options(table.width = "75%") |>
+  opt_stylize(style = 5, color = 'green') |>
+  tab_stubhead(label = "Variable")
 
-# Agrupar las subactividades por actividad
-actividad_clae <- actividades %>%
-  group_by(letra_desc) %>%
-  summarize(CLAE = paste(clae2_desc, collapse = ", "))
-
-# Crear una tabla gt
-tabla_gt <- actividad_clae %>%
-  gt()
-
-# Mostrar la tabla en la notebook de Colab
-tabla_gt
 ```
 
-```{r remedy020}
-jurisdicciones <- read.csv("/content/data/jurisdicciones.csv", sep = ",", encoding = "UTF-8")
-head(jurisdicciones, 5)
+
+#### Jurisdicciones
+
+```{r bloque025}
+jurisdicciones <- read.csv(paste0(PATH, jurisdicciones_csv), sep = ",", encoding = "UTF-8")
+tail(jurisdicciones)
 ```
 
-```{r remedy021}
+```{r bloque026}
 cat("El DataFrame tiene", dim(jurisdicciones)[1], "observaciones y", dim(jurisdicciones)[2], "variables.")
 ```
 
-```{r}
+```{r bloque027}
 # Listado de departamentos
 print(unique(jurisdicciones$departamento))
 ```
 
+### 1.3.Radios Censales
+
+```{r bloque028}
+# lectura de los polígonos de radios censales
+if (SIG) {
+  radios_censales <- sf::st_read(paste0(PATH, shapes_shp))
+}
+```
+
+```{r bloque029}
+# Función para mostrar tablas con datos geoespaciales sin error
+display_geo <- function(tabla, n = 10) {
+  # Verificar que se haya proporcionado una tabla de datos
+  if (!is.data.frame(tabla)) {
+    stop("El argumento 'tabla' debe ser un data frame.")
+  }
+
+  tabla_kable <- kable(head(tabla, n), format = "html") |>
+    kable_styling()
+  tabla_html <- as.character(tabla_kable)
+  display_html(tabla_html)
+}
+```
+
+
+```{r bloque030}
+if (SIG) {
+  tail(radios_censales, 2) |> 
+    gt() |> 
+    tab_options(table.width = "75%") |>
+    opt_stylize(style = 5, color = 'green') |>
+    tab_stubhead(label = "Variable")
+}
+```
+
+```{r bloque031}
+# graficación de radios censales
+if (SIG) {
+  ggplot() +
+    geom_sf(data = radios_censales) +
+    labs(title = "Radios Censales en Área Metropolitana de Buenos Aires")
+}
+```
+
+```{r bloque032}
+if (SIG) {
+  radios_caba <- subset(radios_censales, grepl("_", CO_FRAC_RA))
+}
+```
+
+```{r bloque033}
+# graficación de radios censales
+if (SIG) {
+  ggplot() +
+    geom_sf(data = radios_caba) +
+    labs(title = "Radios Censales en Ciudad Autónoma de Buenos Aires")
+}
+```
+
+## Transformaciones
+
+Debido a que algunas operaciones de machine learning superaban los umbrales de memoria y procesamiento disponibles, y otros arrojaban errores y advertencias, se probó unificando los datos de diferentes radios censales correspondientes a un mismo departamento.
+
+### Agrupar por jurisdicción
+
+
+```{r bloque034}
+# generar columnas de remuneración total
+# agrupar por provincia y departamento
+# dividir remuneración total por cantidad de trabajadores para obtener media departamental
+# no se pudo realizar lo mismo para la mediana
+df_x_departamento <- df |>
+  mutate(
+    Remuneracion_total = Remuneracion_media * Cantidad_trabajadores,
+    Remuneracion_total_Hombres = Remuneracion_media_Hombres * Cantidad_trabajadores_Hombres,
+    Remuneracion_total_Mujeres = Remuneracion_media_Mujeres * Cantidad_trabajadores_Mujeres
+  ) |>
+  group_by(provincia_id, departamento_id) |>
+  summarise(
+    Cantidad_trabajadores = sum(Cantidad_trabajadores),
+    Cantidad_trabajadores_Hombres = sum(Cantidad_trabajadores_Hombres),
+    Cantidad_trabajadores_Mujeres = sum(Cantidad_trabajadores_Mujeres),
+    Remuneracion_media = sum(Remuneracion_total) / sum(Cantidad_trabajadores),
+    Remuneracion_media_Hombres = sum(Remuneracion_total_Hombres) / sum(Cantidad_trabajadores_Hombres),
+    Remuneracion_media_Mujeres = sum(Remuneracion_total_Mujeres) / sum(Cantidad_trabajadores_Mujeres),
+    Poblacion_radio = sum(Poblacion_radio),
+    Viviendas_radio = sum(Viviendas_radio)
+  )
+
+head(df_x_departamento)
+```
+
+```{r bloque035}
+# dimensiones
+cat("El DataFrame tiene", dim(df_x_departamento)[1], "observaciones y", dim(df_x_departamento)[2], "variables.")
+```
+
+```{r bloque036}
+# realiza la misma operación para la tabla no desagregada por actividad
+df_sin_des_x_dep <- df_sin_desagregar |>
+  mutate(
+    Remuneracion_total = Remuneracion_media * Cantidad_trabajadores,
+    Remuneracion_total_Hombres = Remuneracion_media_Hombres * Cantidad_trabajadores_Hombres,
+    Remuneracion_total_Mujeres = Remuneracion_media_Mujeres * Cantidad_trabajadores_Mujeres
+  ) |>
+  group_by(provincia_id, departamento_id) |>
+  summarise(
+    Cantidad_trabajadores = sum(Cantidad_trabajadores),
+    Cantidad_trabajadores_Hombres = sum(Cantidad_trabajadores_Hombres),
+    Cantidad_trabajadores_Mujeres = sum(Cantidad_trabajadores_Mujeres),
+    Remuneracion_media = sum(Remuneracion_total) / sum(Cantidad_trabajadores),
+    Remuneracion_media_Hombres = sum(Remuneracion_total_Hombres) / sum(Cantidad_trabajadores_Hombres),
+    Remuneracion_media_Mujeres = sum(Remuneracion_total_Mujeres) / sum(Cantidad_trabajadores_Mujeres),
+    Poblacion_radio = sum(Poblacion_radio),
+    Viviendas_radio = sum(Viviendas_radio)
+  )
+
+head(df_sin_des_x_dep)
+```
+
+```{r bloque037}
+# dimensiones
+cat("El DataFrame tiene", dim(df_sin_des_x_dep)[1], "observaciones y", dim(df_sin_des_x_dep)[2], "variables.")
+```
+
+```{r bloque038}
+# Cantidad de departamentos
+cat("Cantidad de departamentos de la df:", length(unique(df$departamento_id)))
+```
+
+```{r bloque039}
+# Cantidad de registros por departamento
+registros_depto <- as.data.frame(table(df$departamento_id))
+colnames(registros_depto) <- c("departamento_id", "registros")
+registros_depto <- registros_depto |> arrange(registros)
+
+registros_depto
+```
+
+```{r bloque040}
+# df_6329 <- df[df$departamento_id == 6329, ]
+# write.csv2(df_6329, paste0(PATH,df_6329), row.names = FALSE)
+# 
+# df_sin_des_x_dep[df_sin_des_x_dep$departamento_id == 6329, ]
+```
+
+
+### Polígonos por jurisdicción
+
+Se busca unificar los poligonos de radios censales para crear polígonos por departamento
+
+
+```{r bloque041}
+# df con datos de radios censales, departamento y provincia
+radio_depto <- df_sin_desagregar[, c("LINK", "provincia_id", "departamento_id")]
+
+tail(radio_depto)
+```
+
+```{r bloque042}
+# Realizar un left join entre radios censales y radio_depto
+radios_censales_con_depto <- merge(radios_censales, radio_depto, by.x = "CO_FRAC_RA", by.y = "LINK", all.x = TRUE)
+```
+
+```{r bloque043}
+head(radios_censales_con_depto)
+```
+
+```{r bloque044}
+# Verificar si existen valores que no tengan correspondencia
+cantidad_na <- sum(is.na(radios_censales_con_depto$departamento_id))
+print(paste("Cantidad de valores NA en departamento_id:", cantidad_na))
+```
+
+Existen múltiples NA, por lo que deben existir diferencias entre los datos o formato de la tabla de polígonos (radios censales), y las del df (radio_depto)
+
+```{r bloque045}
+# Contar valores únicos en la columna CO_FRAC_RA de radios_censales
+valores_unicos_CO_FRAC_RA <- length(unique(radios_censales$CO_FRAC_RA))
+print(paste("Valores únicos en CO_FRAC_RA:", valores_unicos_CO_FRAC_RA))
+```
+
+```{r bloque046}
+# Contar valores únicos en la columna LINK de radio_depto
+valores_unicos_LINK <- length(unique(radio_depto$LINK))
+print(paste("Valores únicos en LINK:", valores_unicos_LINK))
+```
+
+```{r bloque047}
+# Verificar si hay valores en CO_FRAC_RA que no están en LINK
+missing_values <- setdiff(radios_censales$CO_FRAC_RA, radio_depto$LINK)
+
+# Verificar si hay valores en LINK que no están en CO_FRAC_RA
+missing_values_reverse <- setdiff(radio_depto$LINK, radios_censales$CO_FRAC_RA)
+
+# Imprimir los resultados
+print("Valores en CO_FRAC_RA que no están en LINK:")
+print(missing_values)
+
+print("Valores en LINK que no están en CO_FRAC_RA:")
+print(missing_values_reverse)
+```
+
+No se puede utilizar el left join para obtener el id del departamento, debido a que los valores de radios en la df y en los polígonos no coinciden. Se prueba extrayendo los datos de los id de radios censales.
+
+```{r bloque048}
+# Filtrar los datos de la tabla jurisdicciones para provincia "CABA"
+id_comunas <- jurisdicciones |>
+  filter(provincia == "CABA") |>
+  select(id = departamento_id, comuna = departamento) |>
+  mutate(comuna = as.integer(sub("Comuna ", "", comuna)))
+
+head(id_comunas)
+```
+
+```{r bloque049}
+# Crear un subset con los poligonos de CABA
+radios_caba <- subset(radios_censales, grepl("_", CO_FRAC_RA))
+```
+
+```{r bloque050}
+# Añadir columnas provincia_id y departamento_id
+radios_caba <- radios_caba |>
+  mutate(provincia_id = 2,
+         departamento_id = as.integer(str_extract(CO_FRAC_RA, "^[0-9]+"))) |>
+  select(CO_FRAC_RA, provincia_id, departamento_id, geometry)
+```
+
+```{r bloque051}
+# Reemplazar el valor que hay almacenado en departamento_id (nº de comuna)
+# por el id que figura en id_comuna
+radios_caba <- radios_caba |>
+  mutate(departamento_id = id_comunas$id[match(as.character(departamento_id), id_comunas$comuna)])
+
+head(radios_caba)
+```
+
+```{r bloque052}
+# Crear un subset con los poligonos de PBA
+radios_pba <- subset(radios_censales, !grepl("_", CO_FRAC_RA))
+```
+
+```{r bloque053}
+# Añadir columnas provincia_id y departamento_id
+radios_pba <- radios_pba |>
+  mutate(provincia_id = 6,
+         departamento_id = as.integer(str_sub(CO_FRAC_RA, 2, 5))) |>
+  select(CO_FRAC_RA, provincia_id, departamento_id, geometry)
+
+head(radios_pba)
+```
+
+```{r bloque054}
+# Unificar radios_caba y radios_pba
+radios_censales_con_depto <- rbind(radios_caba, radios_pba)
+```
+
+```{r bloque055}
+# https://gis.stackexchange.com/questions/63577/joining-polygons-in-r
+# https://r-spatial.github.io/sf/reference/geos_combine.html
+# https://gis.stackexchange.com/questions/447288/the-combination-of-sfst-union-and-sfst-transform-turns-a-valid-geometry-into
+# https://stackoverflow.com/questions/49354393/r-how-do-i-merge-polygon-features-in-a-shapefile-with-many-polygons-reproducib
+```
+
+```{r bloque056}
+# Agrupar por provincia_id y departamento_id y unificar los polígonos
+if (SIG) {
+departamentos <- radios_censales_con_depto |>
+  # filter(departamento_id == 2007) |>
+  group_by(provincia_id, departamento_id) |>
+  summarise(geometry = sf::st_union(geometry))
+}
+```
+
+Al parecer la unificación de polígonos no genera resultados perfectos.
+
+```{r bloque057}
+# Asegura que todos son multipoligonos
+if (SIG) {
+departamentos <- departamentos |>
+  filter(st_geometry_type(geometry) != "POINT")
+}
+```
+
+```{r bloque058}
+# Graficación de departamentos
+if (SIG) {
+  ggplot() +
+    geom_sf(data = departamentos) +
+    labs(title = "Departamentos en Área Metropolitana de Buenos Aires")
+}
+```
+
+```{r bloque059}
+# graficación de barrios
+if (SIG) {
+  barrios_caba <- subset(departamentos, provincia_id == 2)
+  ggplot() +
+    geom_sf(data = barrios_caba) +
+    labs(title = "Barrios en Ciudad Autónoma de Buenos Aires")
+}
+```
 
 ## Descripción
 
-```{r}
+Para la descripción y análisis se generaron alias de las tablas principales:
+
+*   Empleo AMBA --> `df`
+*   Empleo AMBA a Letra --> `df_a_letra` --> `empleo_tipo`
+*   Empleo AMBA sin desagregar --> `df_sin_desagregar` --> `empleo`
+*   Empleo AMBA x departamento --> `df_x_departamento`
+*   Empleo AMBA sin desagregar x departamento --> `df_sin_des_x_dep`
+
+
+```{r bloque060}
+# Función para crear una tabla con kable display html
+
+display_kable <- function(tabla) {
+  tabla_kable <- tabla |>
+    kable(format = "html") |>
+    kable_styling(full_width = FALSE)
+
+  # Mostrar la tabla HTML
+  display_html(as.character(tabla_kable))
+}
+```
+
+```{r bloque061}
+# Descripción de Empleo AMBA sin desagregar
+summary(empleo)
+```
+
+```{r bloque062}
+# Descripción de Empleo AMBA a Letra
+summary(empleo_tipo)
+```
+
+```{r bloque063}
+# Descripción de Empleo AMBA sin desagregar x departamento
+summary(df_sin_des_x_dep)
+```
+
+```{r bloque064}
 hist(empleo$Remuneracion_media_Hombres, breaks = 1000,
      col='blue',
      main='histograma salario_medio',
@@ -283,42 +680,36 @@ hist(empleo$Remuneracion_media_Hombres, breaks = 1000,
      ylab='Frequency')
 ```
 
-```{r}
-summary(empleo)
-```
-
-
-```{r remedy022}
-summary(empleo_tipo)
-```
-
-```{r remedy023}
+```{r bloque065}
 empleo_means <- aggregate(empleo_tipo$Remuneracion_media,
                         list(empleo_tipo$letra),
                         mean)
 empleo_means
 ```
 
-```{r remedy024}
+```{r bloque066}
 filtrado <- empleo_tipo|>
   filter(Remuneracion_media_Hombres < 3000000, Remuneracion_media_Mujeres < 2000000)
+```
 
+```{r bloque067}
 ggplot(filtrado, aes(Remuneracion_media_Hombres,
                         Remuneracion_media_Mujeres)
        ) + geom_point(aes(col=letra), size=3)
 ```
 
-
-```{r remedy025}
+```{r bloque068}
 filtrado2 <- empleo_tipo|>
   filter(Remuneracion_media_Hombres < 500000, Remuneracion_media_Mujeres < 500000)
+```
 
+```{r bloque069}
 ggplot(filtrado2, aes(Remuneracion_media_Hombres,
                         Remuneracion_media_Mujeres)
        ) + geom_point(aes(col=letra), size=3)
 ```
 
-```{r remedy026}
+```{r bloque070}
 #boxplots comparados
 boxplot(filtrado2$Remuneracion_media_Mujeres ~ filtrado2$letra,
         col = 1:3)
@@ -332,7 +723,7 @@ text(x = 1:nrow(empleo_means),
      col = "white")
 ```
 
-```{r remedy027}
+```{r bloque071}
 plot(empleo_tipo$Remuneracion_media_Hombres, empleo_tipo$Remuneracion_media_Mujeres,
      col='steelblue',
      main='Scatterplot',
@@ -341,36 +732,36 @@ plot(empleo_tipo$Remuneracion_media_Hombres, empleo_tipo$Remuneracion_media_Muje
      pch=19)
 ```
 
-```{r remedy028}
+```{r bloque072}
 empleo_tipo2 <- na.omit(filtrado)
 ```
 
-```{r remedy029}
+```{r bloque073}
 empleoCluster2 <- kmeans(filtrado[,9:10], center=2, iter.max=10, nstart=20)
 empleoCluster2
 ```
 
-```{r remedy030}
+```{r bloque074}
 empleoCluster3 <- kmeans(filtrado[,9:10], center=3, iter.max=10, nstart=20)
 empleoCluster3
 ```
 
-```{r remedy031}
+```{r bloque075}
 empleoCluster15 <- kmeans(filtrado[,9:10], center=15, iter.max=10, nstart=20)
 empleoCluster15
 ```
 
-```{r remedy032}
+```{r bloque076}
 table(empleoCluster15$cluster, filtrado$letra)
 clusplot(filtrado, empleoCluster15$cluster, color=T, shade=T, labels=0, lines=0)
 ```
 
-```{r remedy033}
+```{r bloque077}
 # INTERRUPCIÓN. ELIMINAR O COMENTAR SEGÚN SEA NECESARIO
-stop("Detención manual del código")
+# stop("Detención manual del código")
 ```
 
-```{r remedy034}
+```{r bloque078}
 # Para abordar estos warnings, podrías considerar ajustar el número de centroides
 # que estás probando (center) o modificar otros parámetros del algoritmo k-means,
 # como nstart, que controla el número de inicializaciones aleatorias que se ejecutan
@@ -385,11 +776,11 @@ for (i in 1:15){
 }
 ```
 
-```{r remedy035}
+```{r bloque079}
 plot(1:15, tot.withinss, type="b", pch=19)
 ```
 
-```{r remedy036}
+```{r bloque080}
 xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres,
        data = filtrado,
        type = c("p", "g", "smooth"),
@@ -397,7 +788,7 @@ xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres,
        ylab = "Remuneracion_media_Mujeres)")
 ```
 
-```{r remedy037}
+```{r bloque081}
 xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres | letra,
        group = letra,
        data = filtrado,
@@ -406,52 +797,53 @@ xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres | letra,
        scales= "free")
 ```
 
-```{r remedy038}
+```{r bloque082}
 set.seed(001)
 intrain <- createDataPartition(y = filtrado$letra,
                                p= 0.7, list = FALSE)
 ```
 
-```{r remedy039}
+```{r bloque083}
 training <- filtrado[intrain,] # nuevo dataset
 testing <- filtrado[-intrain,] # nuevo dataset
 dim(training)
 dim(testing)
 ```
 
-```{r remedy040}
+```{r bloque084}
 skimmed <- skim(training)
 # skimmed[, c(1:15)]
 summary(skimmed)[1:15]
 ```
 
-```{r remedy041}
+```{r bloque085}
 x = training[, 9:10]
 y = training$letra
 x_test = testing[9:10]
 y_test = testing$letra
 ```
 
-```{r remedy042}
+```{r bloque086}
 trctrl1 <- trainControl(method =
                           "LOOCV", number = 10)
 ```
 
-```{r remedy043}
+```{r bloque087}
 trctrl2 <- trainControl(method =
                           "repeatedcv", number = 10, repeats = 3)
 ```
 
-```{r remedy044}
+```{r bloque088}
 # Acá muere x RAM
 # knn_fit1 <- train(letra ~., data = training, method = "knn",
 #                   trControl =trctrl1,
 #                   tuneLength = 10)
 ```
 
-```{r remedy045}
+```{r bloque089}
 # knn_fit2 <- train(letra ~., data = training, method = "knn",
 #                   trControl =trctrl2,
 #                   preProcess = c("center", "scale"),
 #                   tuneLength = 10)
 ```
+
