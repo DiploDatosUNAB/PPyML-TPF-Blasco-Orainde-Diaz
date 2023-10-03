@@ -103,6 +103,7 @@ jurisdicciones_csv <- "jurisdicciones.csv"
 shapes_shp <- "Shape AMBA.shp"
 ```
 
+
 **Obtención de datos desde repositorio git**
 ```{r bloque003}
 # Clonación de datos del repositorio Git
@@ -110,6 +111,7 @@ if (!dir.exists(PATH) || length(list.files(PATH)) == 0) {
   system("git clone --single-branch --branch datos https://github.com/DiploDatosUNAB/PPyML-TPF-Blasco-Orainde-Diaz.git datos")
 }
 ```
+
 
 **Obtención de tabla Empleo-AMBA desde google drive**
 ```{r bloque004}
@@ -126,6 +128,7 @@ if (!file.exists(paste0(PATH,df_csv))) {
   download.file(drive_path, paste0(PATH,df_csv), mode = "wb")
 }
 ```
+
 
 **Instalación condicional de librerías**
 ```{r bloque005}
@@ -164,7 +167,7 @@ if (SIG) {
 ```
 
 
-*Carga de librerías**
+**Carga de librerías**
 ```{r bloque012}
 # Función de carga condicional de librerías (solo carga si están instaladas)
 cargar <- function(libreria, warns = WARN_ACT) {
@@ -222,12 +225,55 @@ sample_n(df, 5) |>
   gt_theme_538()
 ```
 
+
 **Dimensiones**
 ```{r bloque014}
 # dimensiones
 cat("El DataFrame tiene", dim(df)[1], "observaciones y", dim(df)[2], "variables.")
 
 ```
+
+
+**Medidas de tendencia central- Empleo AMBA**
+```{r bloque014b}
+# Descripción de Empleo AMBA sin desagregar
+summary(df)
+```
+
+
+**Histograma de Remuneración Media**
+```{r bloque014c, fig.asp = 0.80}
+# Histograma 
+remu_alta <- quantile(df$Remuneracion_media, 0.99)
+etiqueta <- scales::dollar_format(prefix = "$", big.mark = ".", decimal.mark = ",")(remu_alta)
+
+# Crea el histograma utilizando ggplot2
+df[df$Remuneracion_media < remu_alta, ] |>
+  ggplot( aes(x = Remuneracion_media)) +
+  geom_histogram(binwidth = 7000,
+                 fill = "darkblue",
+                 color = "darkblue",
+                 alpha = 0.6) +
+  labs(
+    title = "Histograma de Salario Medio*",
+    subtitle = "Muestra del 99% del dataset",
+    x = "Salario",
+    y = "Frecuencia"
+  ) +
+  scale_x_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = ".")) +
+  theme_minimal() +
+  annotate("text", 
+           x = Inf, 
+           y = Inf, 
+           hjust = 1, 
+           vjust = 3, 
+           label = paste0("* las remuneraciones mayores a ",
+                          paste0(etiqueta), " fueron omitidas."),
+           color = "#222222")
+```
+Algo que llama la atención es que, tal como se observa en el gráfico, existen múltiples registros de remuneración media en 0 o valores muy bajos. Sin embargo, se comprobó que son todos registros que pertenecen a radios censales con muy pocos trabajadores (n<6), por lo que no tenemos motivos para considerarlos datos inválidos a los que corresponda asignar NA.
+
 
 **Diccionario**
 ```{r bloque015}
@@ -283,11 +329,15 @@ sample_n(df_a_letra, 5) |>
   tab_options(table.width = "75%") |>
   gt_theme_538()
 ```
+
+
 **Dimensiones**
 ```{r bloque017}
 # dimensiones
 cat("El DataFrame tiene", dim(df_a_letra)[1], "observaciones y", dim(df_a_letra)[2], "variables.")
 ```
+
+
 **Variables**
 ```{r bloque018}
 # lista de variables
@@ -324,11 +374,14 @@ sample_n(df_sin_desagregar, 5) |>
   gt_theme_538()
 ```
 
+
 **Dimensiones**
 ```{r bloque020}
 # dimensiones
 cat("El DataFrame tiene", dim(df_sin_desagregar)[1], "observaciones y", dim(df_sin_desagregar)[2], "variables.")
 ```
+
+
 **Lista de variables**
 ```{r bloque021}
 # lista de variables
@@ -346,6 +399,7 @@ attr(df_sin_desagregar, "names")  |>
   gt_theme_dot_matrix()
 ```
 
+
 Esta tabla posee la misma información que la principal, pero sin desagregar por nomenclador de actividades.
 
 ### 1.2 Tablas Auxiliares
@@ -359,10 +413,12 @@ actividades <- read.csv(paste0(PATH, actividades_csv), sep = ",", encoding = "UT
 # write.csv2(actividades, "datos/Auxiliar/actividades2.csv", row.names = FALSE, fileEncoding = "latin1")
 ```
 
+
 **Dimensiones**
 ```{r}
 cat("El DataFrame tiene", dim(actividades)[1], "observaciones y", dim(actividades)[2], "variables.")
 ```
+
 
 **Nomenclador**
 ```{r bloque024}
@@ -398,6 +454,7 @@ sample_n(jurisdicciones,5) |>
   tab_options(table.width = "75%") |>
   gt_theme_538()
 ```
+
 
 **Dimensiones**
 ```{r bloque026}
@@ -454,6 +511,7 @@ if (SIG) {
 }
 ```
 
+
 **PBA**
 ```{r bloque031}
 # graficación de radios censales
@@ -464,12 +522,14 @@ if (SIG) {
 }
 ```
 
+
 **Radios CABA**
 ```{r bloque032}
 if (SIG) {
   radios_caba <- subset(radios_censales, grepl("_", CO_FRAC_RA))
 }
 ```
+
 
 ```{r bloque033}
 # Graficación de radios censales
@@ -479,6 +539,8 @@ if (SIG) {
     labs(title = "Radios Censales en Ciudad Autónoma de Buenos Aires")
 }
 ```
+
+
 **Dimensiones**
 ```{r bloque031b}
 cat("El DataFrame muestra que existen", dim(subset(radios_censales, grepl("_", CO_FRAC_RA)))[1], "radios censales para el territorio de CABA y y", dim(subset(radios_censales, !grepl("_", CO_FRAC_RA)))[1], "para la fracción de PBA incluida en AMBA")
@@ -493,7 +555,7 @@ Debido a que algunas operaciones de Machine Learning superaban los umbrales de m
 
 Se opta por la segunda vía.
 
-### 2.1 Agrupamiento por jurisdicción
+### 2.1 Unión por jurisdicción
 
 Para realizar esta agrupación, se deben realizar los siguientes pasos:
 1. Obtener los datos de Población y Viviendas para cada departamento
@@ -518,6 +580,7 @@ registros_depto |>
   gt_theme_538()
 
 ```
+
 
 **Almacén de tablas auxiliares para verificación manual**
 ```{r bloque040}
@@ -568,6 +631,7 @@ datos_depto[datos_depto$departamento_id == 6329, ] |>
   gt_theme_538()
 ```
 
+
 ##### 2.1.1.2 Agrupación x departamento
 ```{r bloque034b}
 # generar columnas de remuneración total
@@ -601,6 +665,7 @@ df_x_depto[(df_x_depto$departamento_id == 6329) & (df_x_depto$clae2 == 1), ] |>
   gt_theme_538()
 ```
 
+
 ##### 2.1.1.3 Union de tablas
 ```{r bloque 034c}
 # añadir columnas poblacion y viviendas
@@ -625,6 +690,7 @@ df_x_depto[(df_x_depto$departamento_id == 6329) & (df_x_depto$clae2 == 1), ] |>
 # dimensiones
 cat("El DataFrame tiene", dim(df_x_depto)[1], "observaciones y", dim(df_x_depto)[2], "variables.")
 ```
+
 
 #### 2.1.2 Empleo AMBA - Reducción a Letra
 Se realiza idéntico procedimiento para esta tabla.
@@ -663,6 +729,7 @@ df_x_letra_y_depto[df_x_letra_y_depto$departamento_id == 6329, ] |>
   tab_options(table.width = "75%") |>
   gt_theme_538()
 ```
+
 
 **Dimensiones**
 ```{r bloque035b}
@@ -704,6 +771,8 @@ sample_n(df_sin_des_x_dep,5) |>
   tab_options(table.width = "75%") |>
   gt_theme_538()
 ```
+
+
 **Dimensiones**
 ```{r bloque037}
 # dimensiones
@@ -715,6 +784,7 @@ cat("El DataFrame tiene", dim(df_sin_des_x_dep)[1], "observaciones y", dim(df_si
 cat("Cantidad de departamentos de la df:", length(unique(df$departamento_id)))
 cat("Cantidad de departamentos de la tabla jurisdicciones:", length(unique(jurisdicciones$departamento_id)))
 ```
+
 
 Se observa que existen 2 jurisdicciones no representadas en el relevamiento del dataset.
 
@@ -731,6 +801,32 @@ jurisdicciones  |>
   tab_options(table.width = "65%") |>
   gt_theme_538()
 ```
+
+
+**Medidas de tendencia central**
+```{r bloque038c}
+# Descripción de Empleo AMBA sin desagregar x departamento
+summary(df_sin_des_x_dep)
+```
+
+
+**Boxplot remuneraciones**
+```{r bloque038D, fig.asp = 1.30}
+#boxplots comparados
+df_x_depto |> 
+  left_join(select(jurisdicciones, c(3,4)), by = c("departamento_id" = "departamento_id")) |>
+  ggplot(aes(x = Remuneracion_media,
+             y = reorder(departamento,Remuneracion_media),
+             fill = reorder(departamento,Remuneracion_media))) +
+  geom_boxplot(show.legend = FALSE) +
+  scale_fill_viridis_d() +
+  labs(title = "Boxplot de Remuneración Media por Departamento",
+       x = "Remuneración Media",
+       y = "Departamento") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, 500000))
+```
+
 
 ### 2.2 Polígonos por jurisdicción
 
@@ -750,6 +846,7 @@ sample_n(radio_depto,5) |>
   tab_options(table.width = "50%") |>
   gt_theme_538()
 ```
+
 
 #### 2.2.2 Unificación con Geometrías
 ```{r bloque042}
@@ -789,6 +886,8 @@ print(paste("Valores únicos en CO_FRAC_RA:", valores_unicos_CO_FRAC_RA))
 valores_unicos_LINK <- length(unique(radio_depto$LINK))
 print(paste("Valores únicos en LINK:", valores_unicos_LINK))
 ```
+
+
 **Verificar la diferencia**
 ```{r bloque047}
 # Verificar si hay valores en CO_FRAC_RA que no están en LINK
@@ -800,6 +899,7 @@ missing_values_reverse <- setdiff(radio_depto$LINK, radios_censales$CO_FRAC_RA)
 cat("Valores en CO_FRAC_RA que no están en LINK:", length(missing_values),"\n")
 cat("Valores en LINK que no están en CO_FRAC_RA:", length(missing_values_reverse))
 ```
+
 
 **Prueba de graficación**
 ```{r bloque047b}
@@ -822,6 +922,7 @@ Por lo tanto, no es posible utilizar el left join realizado para obtener el id d
 
 #### 2.2.4 Método alternativo
 
+
 **Lista de comunas**
 ```{r bloque048}
 # Filtrar los datos de la tabla jurisdicciones para provincia "CABA"
@@ -842,6 +943,7 @@ sample_n(id_comunas,5) |>
 
 #### 2.2.5 Creación de subset CABA
 
+
 **Extraer número de comuna del id de radio censal**
 ```{r bloque050}
 # Añadir columnas provincia_id y departamento_id
@@ -850,6 +952,7 @@ radios_caba <- radios_caba |>
          departamento_id = as.integer(str_extract(CO_FRAC_RA, "^[0-9]+"))) |>
   select(CO_FRAC_RA, provincia_id, departamento_id, geometry)
 ```
+
 
 **Reemplazar nº de comuna por id de departamento**
 ```{r bloque051}
@@ -871,12 +974,15 @@ sample_n(radios_caba,2) |>
   tab_options(table.width = "90%") |>
   gt_theme_pff()
 ```
+
+
 #### 2.2.6 Creación de subset PBA
 
 ```{r bloque052}
 # Crear un subset con los poligonos de PBA
 radios_pba <- subset(radios_censales, !grepl("_", CO_FRAC_RA))
 ```
+
 
 **Extraer número de departamento del id de radio censal**
 ```{r bloque053}
@@ -900,6 +1006,7 @@ sample_n(radios_pba,2) |>
   gt_theme_pff()
 ```
 
+
 **Unificación de df**
 ```{r bloque054}
 # Unificar radios_caba y radios_pba
@@ -908,6 +1015,7 @@ radios_censales_con_depto <- rbind(radios_caba, radios_pba)
 
 #### 2.2.7 Unificación de geometrías
 
+
 **links de referencia**
 ```{r bloque055}
 # https://gis.stackexchange.com/questions/63577/joining-polygons-in-r
@@ -915,6 +1023,7 @@ radios_censales_con_depto <- rbind(radios_caba, radios_pba)
 # https://gis.stackexchange.com/questions/447288/the-combination-of-sfst-union-and-sfst-transform-turns-a-valid-geometry-into
 # https://stackoverflow.com/questions/49354393/r-how-do-i-merge-polygon-features-in-a-shapefile-with-many-polygons-reproducib
 ```
+
 
 **Aplicación de la función**
 ```{r bloque056}
@@ -943,6 +1052,7 @@ departamentos |>
 ```
 
 Se observa que los polígonos departamentales son mucho más complejos.
+
 
 **Convertir a multipolígonos**
 ```{r bloque057}
@@ -974,6 +1084,7 @@ if (SIG) {
 
 Visualmente se distinguen algunas imperfecciones y líneas internas, lo que refuerza la hipótesis de que estos polígonos poseen algunos defectos en su geometría.Como alternativa final, a fin de evitar problemas en la graficación, es posible utilizar polígonos departamentales de fuentes oficiales.
 
+
 **Fuentes**
 ```{r}
 # https://datos.gob.ar/dataset/ign-unidades-territoriales/archivo/ign_01.02.02
@@ -993,6 +1104,7 @@ if (SIG) {
 }
 ```
 
+
 **Carga de datos IGN**
 ```{r}
 if (SIG) {
@@ -1007,6 +1119,7 @@ if (SIG) {
 
 Por su tamaño, se puede suponer que estos polígonos son bastante más complejos.
 
+
 **Graficación**
 ```{r}
 # Graficación de departamentos
@@ -1016,6 +1129,7 @@ if (SIG) {
     labs(title = "Comunas en Ciudad de Buenos Aires - IGN")
 }
 ```
+
 El resultado es en apariencia más prolijo que la unión de polígonos de radios censales.
 
 ## 3. Descripción
@@ -1084,6 +1198,7 @@ totales |>
   tab_options(table.width = "75%") |>
   opt_stylize(style = 5, color = 'cyan')
 ```
+
 
 **Parciales CABA y PBA**
 ```{r}
@@ -1193,6 +1308,7 @@ df_sin_des_x_dep |>
        x = "Remuneración Promedio", y = "Jurisdicción")
 ```
 
+
 ```{r fig.asp = 1.30}
 # Gráfico de remuneración promedio por género y jurisdicción
 df_sin_des_x_dep |>
@@ -1279,6 +1395,7 @@ df_x_actividad |>
 
 ```
 
+
 **Gráficos de barras**
 ```{r fig.asp = 0.80 }
 # Gráfico de barras de remuneración promedio por actividad
@@ -1312,12 +1429,10 @@ df_x_actividad |>
 De la tabla y gráficos podemos observar que el tipo de actividad representa el mayor ejemplo de brecha salarial, y que en general,podemos ubicar las actividades con mayor remuneración promedio como las que tienen menos cantidad de trabajadores totales. 
 
 Las excepciones parecen ser los sin categorizar (entendemos que por falta de datos en base) y los de personal doméstico de hogares privados. Sin embargo, en la sección consideraciones de la metodología, se aclara:
-> "no forman parte de la base las relaciones laborales no
-registradas y las diversas formas de trabajo por cuenta propia, sea registrado o no. A su vez,
-dado que los trabajadores de casas particulares cuentan con un régimen especial, este
-tampoco es incluido en la información provista."
 
-Con estas aclaraciones, lo que entendemos es que el grueso de trabajadores "en negro" no estaría incluido en estos datos.
+> "[...] no forman parte de la base las relaciones laborales no registradas y las diversas formas de trabajo por cuenta propia, sea registrado o no. A su vez,dado que los trabajadores de casas particulares cuentan con un régimen especial, este tampoco es incluido en la información provista."
+
+Con estas aclaraciones, lo que podría entenderse en principio es que es el grueso de trabajadores "en negro" el que no estaría incluido en estos datos.
 
 **Proporción de trabajadores**
 ```{r}
@@ -1338,9 +1453,27 @@ df_proporcion|>
 labs(title = "Proporción de trabajadores*",
      subtitle = "* cantidad de trabajadores / población de la jurisdicción")
 ```
-Este gráfico nos da una un argumento para soportar esta hipótesis. Consultando estadísticas sobre Población Económicamente Activa (PEA), para la fecha de este relevamiento (octubre 2021) provistas por el INDEC (https://www.indec.gob.ar/uploads/informesdeprensa/mercado_trabajo_eph_2trim228FD416F03D.pdf), alrededor del 46,7%, vemos que nuestros datos dan una proporción mucho menor (en promedio, (``r round(totales$Cantidad_trabajadores/totales$Poblacion*100,2)``%), y que también existe una gran diferencia entre las proporciones de CABA (``r round(remuneraciones$Trabajadores_total[1]/remuneraciones$Poblacion[1]*100,2)``%), y PBA (``r round(remuneraciones$Trabajadores_total[2]/remuneraciones$Poblacion[2]*100,2)``%).
+Para soportar esta hipótesis podría consultarse el gráfico de proporición de trabajadores para cada jurisdicción. Consultando estadísticas sobre Población Económicamente Activa (PEA), para la fecha de este relevamiento (octubre 2021) provistas por el INDEC (https://www.indec.gob.ar/uploads/informesdeprensa/mercado_trabajo_eph_2trim228FD416F03D.pdf), alrededor del 46,7%, vemos que nuestros datos dan una proporción mucho menor (en promedio, (``r round(totales$Cantidad_trabajadores/totales$Poblacion*100,2)``%), y que también existe una gran diferencia entre las proporciones de CABA (``r round(remuneraciones$Trabajadores_total[1]/remuneraciones$Poblacion[1]*100,2)``%), y PBA (``r round(remuneraciones$Trabajadores_total[2]/remuneraciones$Poblacion[2]*100,2)``%).
 
-Tal como se indica en la tabla debajo, existen jurisdicciones con proporciones de menos del 6% (Ensenada), y la más alta de 37,2% (Comuna 1). Todo esto, en principio podríamos atribuirlo al empleo informal y la desocupación, pero por supuesto se necesitaría de acceso a muchos otros datos censales para confrontar este supuesto.
+Tal como se indica en la tabla debajo, existen jurisdicciones con proporciones de menos del 6% (Ensenada), y la más alta de 37,2% (Comuna 1). Esta discrepancia, que en principio podría atribuirse al empleo informal y la desocupación, obedece sin embargo a otra circunstancia, explicada en las consideraciones del documento de metodología del dataframe: 
+
+> "[...] la información provista en la base de datos no refleja el conjunto de los asalariados formales de AMBA, sino sólo de una parte (el 57%). A partir de la información disponible, se pudieron georreferenciar -a nivel de radio censal- 2.258.924 trabajadores. La porción no georreferenciada a nivel radio censal de trabajadores del AMBA se debe a la imposibilidad de georreferenciar las direcciones suministradas, ausencia de direcciones o al hecho de que el tipo de inscripción en la AFIP no ofrece información sobre la residencia, sino solo un domicilio fiscal."
+
+Por esto, no es lícito explicar la diferencia entre el PAE censal y los datos de la base por trabajo informal o desempleo.
+
+```{r}
+
+geo_x_depto <- read.csv(paste0(PATH, "geo_por_depto.csv"), sep = ";", encoding = "UTF-8")
+
+geo_x_depto |>
+  gt() |>
+  tab_header(
+    title = "Proporción de trabajadores georreferenciados por departamento",
+    subtitle = "obtenido del documento de metodología"
+  ) |>
+  tab_options(table.width = "75%") |>
+  gt_theme_538()
+```
 
 
 ```{r}
@@ -1350,7 +1483,7 @@ df_proporcion |>
   tab_header(
     title = "Empleo AMBA - Población y Trabajadores",
   ) |>
-  tab_options(table.width = "75%") |>
+  tab_options(table.width = "90%") |>
   gt_theme_538() |> 
     data_color(
     palette = "plasma",
@@ -1359,63 +1492,22 @@ df_proporcion |>
 ```
 
 ### 3.2 Correlaciones
-*Matriz de Correlación*
-Versión de www.khstats.com/blog/corr-plots
-```{r}
-# tomado de https://www.khstats.com/blog/corr-plots/
-cors <- function(df) {
-  M <- Hmisc::rcorr(as.matrix(df))
-  Mdf <- map(M, ~data.frame(.x))
-  return(Mdf)
-}
 
-formatted_cors <- function(df){
-  cors(df) %>%
-    map(~rownames_to_column(.x, var = "variable1")) %>%
-    map(~pivot_longer(.x, cols = -variable1, names_to = "variable2", values_to = "value")) %>%
-    bind_rows(.id = "id") %>%
-    pivot_wider(names_from = id, values_from = value) %>%
-    rename(p = P) %>%
-    mutate(sig_p = ifelse(p < .05, T, F),
-           p_if_sig = ifelse(sig_p, p, NA),
-           r_if_sig = ifelse(sig_p, r, NA)) 
-}
+#### 3.2.1 Modelo personalizado
 
-formatted_cors(df[, 6:16]) |>
-  ggplot( aes(variable1, variable2, fill=r, label=round(r_if_sig,2))) +
-  geom_tile() +
-  labs(x = NULL, y = NULL, fill = "Correlaciones\nde Pearson", title="Correlaciones",
-       subtitle="Solo muestra coeficientes de correlacion significativos") +
-  scale_fill_gradient2(mid="#FBFEF9",low="#A63446",high="#0C6291", limits=c(-1,1)) +
-  geom_text() +
-  theme_classic() +
-  scale_x_discrete(expand=c(0,0)) +
-  scale_y_discrete(expand=c(0,0)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-```{r}
-matriz <- Hmisc::rcorr(as.matrix(df[, 6:16]))
-
-data.frame(matriz$r) |> 
-  gt() |> 
-  tab_options(table.width = "75%") |>
-  gt_theme_538()
-
-```
-
-
+**Matriz de Correlación**
 ```{r}
 # Matriz de correlación# 
 # https://blog.hasanbul.li/2018/01/14/exporting-correlation-plots/
 matriz_cor <- cor(df[, 6:16], use = "complete.obs")
-
-matriz_cor
+knitr::kable(matriz_cor, format = "html")
+# matriz_cor
   
 
 ```
 
 
+**Gráfico de Correlación personalizado**
 ```{r}
 # Gráfico de correlación
 # https://www.khstats.com/blog/corr-plots/
@@ -1437,36 +1529,81 @@ corrplot(
   # diag = FALSE             # Diagonal
   )
 # dev.off()
-
-
-
-matriz_cor
+# matriz_cor
 ```
 
 
+#### 3.2.2 Versión de www.khstats.com/blog/corr-plots
 
-```{r bloque061}
-# Descripción de Empleo AMBA sin desagregar
-summary(empleo)
+**Función**
+```{r}
+# tomado de https://www.khstats.com/blog/corr-plots/
+cors <- function(df) {
+  M <- Hmisc::rcorr(as.matrix(df))
+  Mdf <- map(M, ~data.frame(.x))
+  return(Mdf)
+}
+
+formatted_cors <- function(df){
+  cors(df) %>%
+    map(~rownames_to_column(.x, var = "variable1")) %>%
+    map(~pivot_longer(.x, cols = -variable1, names_to = "variable2", values_to = "value")) %>%
+    bind_rows(.id = "id") %>%
+    pivot_wider(names_from = id, values_from = value) %>%
+    rename(p = P) %>%
+    mutate(sig_p = ifelse(p < .05, T, F),
+           p_if_sig = ifelse(sig_p, p, NA),
+           r_if_sig = ifelse(sig_p, r, NA)) 
+}
 ```
 
-```{r bloque062}
-# Descripción de Empleo AMBA a Letra
-summary(empleo_tipo)
+
+**Matriz de correlaciones**
+```{r}
+matriz <- Hmisc::rcorr(as.matrix(df[, 6:16]))
+
+data.frame(matriz$r) |> 
+  gt() |> 
+  tab_options(table.width = "75%") |>
+  gt_theme_538()
+
 ```
 
-```{r bloque063}
-# Descripción de Empleo AMBA sin desagregar x departamento
-summary(df_sin_des_x_dep)
+**Matriz de P valores**
+```{r}
+data.frame(matriz$P) |> 
+  gt() |> 
+  tab_options(table.width = "75%") |>
+  gt_theme_538()
 ```
 
-```{r bloque064}
-hist(empleo$Remuneracion_media_Hombres, breaks = 1000,
-     col='blue',
-     main='histograma salario_medio',
-     xlab='salario',
-     ylab='Frequency')
+
+**Matriz de observaciones (n)**
+```{r}
+data.frame(matriz$n) |> 
+  gt() |> 
+  tab_options(table.width = "75%") |>
+  gt_theme_538()
 ```
+
+
+**Gráfico de correlaciones**
+```{r}
+formatted_cors(df[, 6:16]) |>
+  ggplot( aes(variable1, variable2, fill=r, label=round(r_if_sig,2))) +
+  geom_tile() +
+  labs(x = NULL, y = NULL, fill = "Correlaciones\nde Pearson", title="Correlaciones",
+       subtitle="Solo muestra coeficientes de correlacion significativos") +
+  scale_fill_gradient2(mid="#FBFEF9",low="#A63446",high="#0C6291", limits=c(-1,1)) +
+  geom_text() +
+  theme_classic() +
+  scale_x_discrete(expand=c(0,0)) +
+  scale_y_discrete(expand=c(0,0)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
 
 
 ```{r bloque065}
@@ -1522,6 +1659,7 @@ plot(df_x_depto$Remuneracion_media_Hombres, df_x_depto$Remuneracion_media_Mujere
      ylab='Media mujeres',
      pch=19)
 ```
+# Predicciones
 
 ```{r bloque07, eval=ML}
 empleo_tipo2 <- na.omit(filtrado)
@@ -1641,3 +1779,8 @@ knn_fit2 <- train(departamento_id ~., data = training, method = "knn",
 knn_fit2
 ```
 
+**Información de la sesión**
+```{r bloque_final}
+sessionInfo()
+
+```
