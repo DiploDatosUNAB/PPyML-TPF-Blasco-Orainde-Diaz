@@ -824,7 +824,9 @@ df_x_depto |>
        x = "Remuneración Media",
        y = "Departamento") +
   theme_minimal() +
-  coord_cartesian(xlim = c(0, 500000))
+  coord_cartesian(xlim = c(0, 500000)) +
+  scale_x_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = "."))
 ```
 
 
@@ -1603,94 +1605,199 @@ formatted_cors(df[, 6:16]) |>
 
 ```
 
+# Machine Learning
 
 
+**Gráfico de Dispersión**
+```{r bloque067}
+filtrado <- df_x_depto|>
+  filter(Remuneracion_media_Hombres < 2000000, Remuneracion_media_Mujeres < 2000000) |> 
+  left_join(jurisdicciones, by = c("provincia_id", "departamento_id"))
 
+
+ggplot(filtrado, aes(Remuneracion_media_Hombres,
+                        Remuneracion_media_Mujeres)
+       ) + geom_point(aes(col=departamento), size=1, alpha = 0.7) +
+  scale_color_viridis_d() +
+  labs(title = "Remuneración media mujeres vs hombres*",
+       subtitle = "* filtrados medias mayores a 2.000.000",
+       x = "Remuneración Media",
+       y = "Departamento") +
+  theme_minimal() +
+  scale_x_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = ".")) +
+  scale_y_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = ".")) +
+  coord_fixed(ratio = 1) +
+  theme(legend.position = "none")  # Esto oculta la leyenda
+```
+
+
+**Reducción de escala**
+```{r bloque069}
+filtrado2 <- df_x_depto|>
+  filter(Remuneracion_media_Hombres < 500000, Remuneracion_media_Mujeres < 500000) |> 
+  left_join(jurisdicciones, by = c("provincia_id", "departamento_id"))
+
+
+ggplot(filtrado2, aes(Remuneracion_media_Hombres,
+                        Remuneracion_media_Mujeres)
+       ) + geom_point(aes(col=departamento), size=1, alpha = 0.7) +
+  scale_color_viridis_d() +
+  labs(title = "Remuneración media mujeres vs hombres*",
+       subtitle = "* filtrados medias mayores a 500.000",
+       x = "Remuneración Media",
+       y = "Departamento") +
+  theme_minimal() +
+  scale_x_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = ".")) +
+  scale_y_continuous(labels = scales::number_format(decimal.mark = ",",
+                                                    big.mark = ".")) +
+  coord_fixed(ratio = 1) +
+  theme(legend.position = "none")  # Esto oculta la leyenda
+```
+
+
+**Leyendas**
+```{r}
+# Leyendas
+
+ggplot(filtrado, aes(x = 0, y = 0, col = departamento)) +
+  geom_point(size = 2) +
+  theme_void() +
+  scale_color_viridis_d() +
+  guides(col = guide_legend(title = "Departamento"))
+
+```
+
+
+Medias 
 ```{r bloque065}
-empleo_means <- aggregate(df_x_depto$Remuneracion_media,
-                        list(df_x_depto$departamento_id),
-                        mean)
+empleo_means <- df_sin_des_x_dep[, c("departamento_id", "Remuneracion_media")]
 empleo_means
 ```
 
 
-```{r bloque066}
-filtrado <- df_x_depto|>
-  filter(Remuneracion_media_Hombres < 3000000, Remuneracion_media_Mujeres < 2000000)
+## Predicciones
+
+```{r}
+str(df)
+
 ```
 
 
-```{r bloque067}
-ggplot(filtrado, aes(Remuneracion_media_Hombres,
-                        Remuneracion_media_Mujeres)
-       ) + geom_point(aes(col=departamento_id), size=2)
+```{r, eval=ML, include=ML}
+
+# División de datos en entrenamiento y prueba (70% entrenamiento, 30% prueba)
+set.seed(123) # Para reproducibilidad
+indice_entrenamiento <- sample(1:nrow(df), 0.7 * nrow(df))
+datos_entrenamiento <- df[indice_entrenamiento, ]
+datos_prueba <- df[-indice_entrenamiento, ]
+
+# Entrenamiento del modelo de regresión lineal
+modelo <- lm(Remuneracion_media ~ clae2 + Cantidad_trabajadores + Cantidad_trabajadores_Hombres + Cantidad_trabajadores_Mujeres + Poblacion_radio + Viviendas_radio, data = datos_entrenamiento)
+
+# Resumen del modelo
+summary(modelo)
+
+# Evaluación del modelo en el conjunto de prueba
+predicciones <- predict(modelo, newdata = datos_prueba)
+resultados <- data.frame(Real = datos_prueba$Remuneracion_media, Predicho = predicciones)
+
+# Métricas de evaluación (por ejemplo, Error Cuadrático Medio)
+error_cuadratico_medio <- mean((resultados$Real - resultados$Predicho)^2)
+print(paste("Error Cuadrático Medio:", error_cuadratico_medio))
+
+# También puedes usar otras métricas como R cuadrado (R^2), etc.
 ```
 
-```{r bloque068}
-filtrado2 <- df_x_depto|>
-  filter(Remuneracion_media_Hombres < 500000, Remuneracion_media_Mujeres < 500000)
+```{r , eval=ML, include=ML}
+# Carga de bibliotecas necesarias
+library(ggplot2)
+library(caret)
+
+# Crear un subconjunto de características y la variable de destino
+subset_df <- df[, c("Cantidad_trabajadores_Hombres", "Cantidad_trabajadores_Mujeres", "Poblacion_radio", "Remuneracion_media")]
+
+# División del conjunto de datos en entrenamiento y prueba
+set.seed(123)
+train_index <- createDataPartition(subset_df$Remuneracion_media, p = 0.7, list = FALSE)
+train_data <- subset_df[train_index, ]
+test_data <- subset_df[-train_index, ]
+
+# Ajustar el modelo de regresión lineal
+lm_model <- lm(Remuneracion_media ~ ., data = train_data)
+
+# Realizar predicciones en el conjunto de prueba
+predictions <- predict(lm_model, newdata = test_data)
+
+# Evaluar el rendimiento del modelo
+rmse <- sqrt(mean((test_data$Remuneracion_media - predictions)^2))
+# cat("Error cuadrático medio (RMSE):", rmse, "\n")
+
+# Visualizar los resultados
+ggplot(test_data, aes(x = Remuneracion_media, y = predictions)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
+  labs(title = "Regresión Lineal: Observado vs. Predicho",
+       x = "Observado",
+       y = "Predicho")
 ```
 
-```{r bloque069}
-ggplot(filtrado2, aes(Remuneracion_media_Hombres,
-                        Remuneracion_media_Mujeres)
-       ) + geom_point(aes(col=departamento_id), size=1)
+```{r, eval=ML, include=ML}
+# Carga de bibliotecas necesarias
+library(dplyr)
+library(ggplot2)
+
+# Crear un subconjunto de características relevantes para clustering
+cluster_df <- na.omit(df[, c("Cantidad_trabajadores_Hombres", "Cantidad_trabajadores_Mujeres", "Remuneracion_media")])
+
+# Estandarizar las características
+scaled_data <- scale(cluster_df)
+
+# Aplicar k-Means para agrupar radios censales
+kmeans_model <- kmeans(scaled_data, centers = 3, nstart = 25)
+
+# Agregar la asignación de grupos al conjunto de datos original
+cluster_df$Cluster <- kmeans_model$cluster
+
+# Visualizar los resultados
+ggplot(cluster_df, aes(x = Cantidad_trabajadores_Hombres, y = Remuneracion_media, color = factor(Cluster))) +
+  geom_point() +
+  labs(title = "Clustering k-Means: Cantidad de Trabajadores vs. Remuneración Media",
+       x = "Cantidad de Trabajadores Hombres",
+       y = "Remuneración Media",
+       color = "Cluster") +
+  theme_minimal()
+
 ```
 
-```{r bloque070}
-#boxplots comparados
-boxplot(filtrado2$Remuneracion_media_Mujeres ~ filtrado2$departamento_id,
-        col = 1:3)
-points(x = 1:nrow(empleo_means),
-       y = empleo_means$x,
-       pch = 16,
-       col = "white")
-text(x = 1:nrow(empleo_means),
-     y = empleo_means$x + 1.2,
-     labels = round(empleo_means$x, 2),
-     col = "white")
-```
 
-```{r bloque071}
-plot(df_x_depto$Remuneracion_media_Hombres, df_x_depto$Remuneracion_media_Mujeres,
-     col='steelblue',
-     main='Scatterplot',
-     xlab='Media hombres',
-     ylab='Media mujeres',
-     pch=19)
-```
-# Predicciones
-
-```{r bloque07, eval=ML}
+```{r bloque072, eval=ML, include=ML}
 empleo_tipo2 <- na.omit(filtrado)
 ```
 
-```{r bloque073, eval=ML}
+```{r bloque073, eval=ML, include=ML}
 empleoCluster2 <- kmeans(filtrado[,9:10], center=2, iter.max=10, nstart=20)
 empleoCluster2
 ```
 
-```{r bloque074, eval=ML}
+```{r bloque074, eval=ML, include=ML}
 empleoCluster3 <- kmeans(filtrado[,9:10], center=3, iter.max=10, nstart=20)
 empleoCluster3
 ```
 
-```{r bloque075, eval=ML}
+```{r bloque075, eval=ML, include=ML}
 empleoCluster15 <- kmeans(filtrado[,9:10], center=15, iter.max=10, nstart=20)
 empleoCluster15
 ```
 
-```{r bloque076, eval=ML}
+```{r bloque076, eval=ML, include=ML}
 table(empleoCluster2$cluster, filtrado$departamento_id)
 clusplot(filtrado, empleoCluster2$cluster, color=T, shade=T, labels=0, lines=0)
 ```
 
-```{r bloque077, eval=ML}
-# INTERRUPCIÓN. ELIMINAR O COMENTAR SEGÚN SEA NECESARIO
-# stop("Detención manual del código")
-```
-
-```{r bloque078, eval=ML}
+```{r bloque078, eval=ML, include=ML}
 # Para abordar estos warnings, podrías considerar ajustar el número de centroides
 # que estás probando (center) o modificar otros parámetros del algoritmo k-means,
 # como nstart, que controla el número de inicializaciones aleatorias que se ejecutan
@@ -1705,11 +1812,11 @@ for (i in 1:15){
 }
 ```
 
-```{r bloque079, eval=ML}
+```{r bloque079, eval=ML, include=ML}
 plot(1:15, tot.withinss, type="b", pch=19)
 ```
 
-```{r bloque080, eval=ML}
+```{r bloque080, eval=ML, include=ML}
 xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres,
        data = filtrado,
        type = c("p", "g", "smooth"),
@@ -1717,48 +1824,49 @@ xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres,
        ylab = "Remuneracion_media_Mujeres)")
 ```
 
-```{r bloque081, eval=ML}
-xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres | departamento_id,
-       group = departamento_id,
-       data = filtrado,
+```{r bloque081, eval=ML, include=ML}
+xyplot(Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres | provincia_id,
+       # group = departamento_id,
+       data = df_a_letra,
        auto.key = TRUE,
        type = c("p", "smooth"),
        scales= "free")
+    
 ```
 
-```{r bloque082, eval=ML}
+```{r bloque082, eval=ML, include=MLL}
 set.seed(001)
 filtrado <- filtrado[complete.cases(filtrado), ]
 intrain <- createDataPartition(y = filtrado$departamento_id,
-                               p = 0.7, list = FALSE)
+                               p= 0.7, list = FALSE)
 ```
 
-```{r bloque083, eval=ML}
-training <- filtrado[intrain, ]
-testing <- filtrado[-intrain, ]
+```{r bloque083, eval=ML, include=MLL}
+training <- filtrado[intrain,] # nuevo dataset
+testing <- filtrado[-intrain,] # nuevo dataset
 dim(training)
 dim(testing)
 ```
 
-```{r bloque084, eval=ML}
+```{r bloque084, eval=ML, include=ML}
 skimmed <- skim(training)
 # skimmed[, c(1:15)]
 summary(skimmed)[1:15]
 ```
 
-```{r bloque085, eval=ML}
+```{r bloque085, eval=ML, include=ML}
 x = training[, 9:10]
 y = training$departamento_id
 x_test = testing[9:10]
 y_test = testing$departamento_id
 ```
 
-```{r bloque086, eval=ML}
+```{r bloque086, eval=ML, include=ML}
 trctrl1 <- trainControl(method =
                           "LOOCV", number = 10)
 ```
 
-```{r bloque087, eval=ML}
+```{r bloque087, eval=ML, include=ML}
 trctrl2 <- trainControl(method =
                           "repeatedcv", number = 10, repeats = 3)
 ```
@@ -1768,19 +1876,38 @@ trctrl2 <- trainControl(method =
 knn_fit1 <- train(departamento_id ~., data = training, method = "knn",
                    trControl =trctrl1,
                    tuneLength = 10)
-knn_fit1
 ```
 
-```{r bloque089, eval=ML}
+```{r bloque089, eval=ML, include=ML}
 knn_fit2 <- train(departamento_id ~., data = training, method = "knn",
                    trControl =trctrl2,
                    preProcess = c("center", "scale"),
                    tuneLength = 10)
-knn_fit2
 ```
 
-**Información de la sesión**
-```{r bloque_final}
-sessionInfo()
 
+
+## regresión simple
+
+```{r, eval=ML, include=MLL}
+utils::View(df_x_depto)
 ```
+
+```{r, eval=ML, include=ML}
+  ggplot(data = df_a_letra, aes(x = Remuneracion_media, y = Remuneracion_media_Hombres)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+```{r, eval=ML, include=ML}
+modelo <- lm(formula = Remuneracion_media_Hombres ~ Remuneracion_media_Mujeres, data = df_x_depto)
+```
+
+
+
+
+
+
+
+
