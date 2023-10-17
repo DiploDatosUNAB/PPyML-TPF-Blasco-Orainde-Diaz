@@ -1971,7 +1971,7 @@ Se observa que los grupos de radios censales tienen gran superposición, sin imp
 ### 6.2 X departamentos y proporción
 
 
-**Gráfigo geoespacial**
+**Gráfico geoespacial**
 ```{r}
 # Gráfico de remuneración promedio por jurisdicción
 df_sin_des_x_dep |> 
@@ -2077,6 +2077,10 @@ df_cluster_dep |>
 
 Los clusters definidos por el algoritmo Knn guardan visualmente relación con los datos visuales de la proporción de salarios en los distintos departamentos. Asimismo, los valores e proporción promedio para cada cluster varían significativamente, teniendo en cuenta los valores mínimo (``r round(prop_min,2)``) y máximo (``r round(prop_min,2)``) para cada departamento.  En principio, habría evidencia para suponer que existe autocorrelación espacial entre estos datos, es decir, que la ubicación geográfica influye en que tan marcada es la brecha de remuneración por género.
 
+
+```{r}
+sessionInfo()
+```
 
 
 
